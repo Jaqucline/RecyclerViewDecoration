@@ -1,19 +1,53 @@
 package com.ysl.recyclerviewdecoration;
 
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.view.View;
+
+import org.w3c.dom.Text;
 
 /**
  * Created on 2017/6/27.
  */
 
-public class MyItemDecoration extends RecyclerView.ItemDecoration implements GetProvinceName {
+public class MyItemDecoration extends RecyclerView.ItemDecoration{
 
-    private int mGroupHeight = 30;
+    private int mGroupTextColor = Color.GRAY;
+    private int mGroupBackground = Color.WHITE;
+    private int mGroupHeight = 80;
+    private int mTextSize = 40;
+    private int mLeftMargin = 10;
+    private GetProvinceName mGetProvinceName;
 
+    //设置画笔
+    private TextPaint mTextPaint;
+    private Paint mGroupPaint;
+
+    public MyItemDecoration(GetProvinceName getProvinceName) {
+        this.mGetProvinceName = getProvinceName;
+        //设置粘性头部画笔
+        mGroupPaint = new Paint();
+        mGroupPaint.setColor(mGroupBackground);
+        //设置文字画笔
+        mTextPaint = new TextPaint();
+        //抗锯齿
+        mTextPaint.setAntiAlias(true);
+        mTextPaint.setColor(mGroupTextColor);
+        mTextPaint.setTextSize(mTextSize);
+        mTextPaint.setTextAlign(TextPaint.Align.LEFT);
+    }
+
+    public String getProvinceName(int position){
+        if (mGetProvinceName != null){
+           return mGetProvinceName.getProvinceName(position);
+        }
+        return null;
+    }
     /**
      * 判断是否在同一个分组
      *
@@ -79,16 +113,31 @@ public class MyItemDecoration extends RecyclerView.ItemDecoration implements Get
         int right = parent.getRight() - parent.getPaddingRight();
 
         String preGroupName;
-        String nowGroupName;
+        String nowGroupName = null;
 
-//        for (int i = 0; i < ; i++) {
-//
-//        }
-    }
-
-
-    @Override
-    public String getProvinceName(int position) {
-        return null;
+        for (int i = 0; i < childCount; i++) {
+            View view = parent.getChildAt(i);
+            int childAdapterPosition = parent.getChildAdapterPosition(view);
+            preGroupName = nowGroupName;
+            nowGroupName = getProvinceName(childAdapterPosition);
+            if (nowGroupName == null || TextUtils.equals(preGroupName,nowGroupName)) {
+                continue;
+            }
+            int viewBottom = view.getBottom();
+            int top = Math.max(mGroupHeight, view.getTop());
+            if (childAdapterPosition + 1<itemCount ){
+                //获取下一个GroupName
+                String nextGroupName = getProvinceName(childAdapterPosition +1);
+                if (!TextUtils.equals(nowGroupName,nextGroupName) && viewBottom <top){
+                    top = viewBottom;
+                }
+            }
+            //根据top绘制group
+            c.drawRect(left,top - mGroupHeight,right,top,mGroupPaint);
+            Paint.FontMetrics  fm = mTextPaint.getFontMetrics();
+            //文字居中显示
+            float baseLine = top - (mGroupHeight - (fm.bottom - fm.top)) / 2 - fm.bottom;
+            c.drawText(nowGroupName,left + mLeftMargin,baseLine,mTextPaint);
+        }
     }
 }
